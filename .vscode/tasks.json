@@ -1,0 +1,25 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "windows": {
+        "options": {
+            "shell": {
+                "executable": "powershell.exe",
+                "args": [ "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command" ]
+            }
+        }
+    },
+    "tasks": [
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "command": "Invoke-Pester -Path .\\Tests\\ -OutputFile .\\Tests\\TestResults.xml -OutputFormat NUnitXml -PassThru -EnableExit",
+            "problemMatcher": [ "$pester" ]
+        }
+    ]
+}

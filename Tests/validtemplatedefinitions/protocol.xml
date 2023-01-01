@@ -1,0 +1,8 @@
+<MyWordTemplateDefinition Name="protocol">
+    <UserProvided>
+        <Userinput Name="Test" ID="test" Prompt="Enter Date" />
+        <!--<Loop Name="Test Loop" ID="testloop" BreakKeyword="done" Prompt="Test Loop">
+            <Userinput Name="Test" ID="loopinput" Prompt="Enter Date" />          
+        </Loop>-->
+    </UserProvided>
+</MyWordTemplateDefinition>

@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<!--
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="MyWordTemplateDefinition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="1" name="UserProvided">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="UserInput">
+                <xs:complexType>
+                  <xs:attribute name="Name" type="xs:string" use="required" />
+                  <xs:attribute name="ID" type="xs:string" use="required" />
+                  <xs:attribute name="Prompt" type="xs:string" use="required" /> 
+                  <xs:attribute name="ValidateRegex" type="xs:string" /> 
+                  <xs:attribute name="ConditionDateYoungerThan" type="xs:string" />                               
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" maxOccurs="1" name="Placeholders">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element minOccurs="0" maxOccurs="unbounded" name="Placeholder">
+                <xs:complexType>     
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute name="Name" type="xs:string" use="required" />
+                      <xs:attribute name="ID" type="xs:string" use="required" />
+                    </xs:extension>
+                  </xs:simpleContent>                               
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>        
+      </xs:sequence>
+      <xs:attribute name="Name" type="xs:string" use="required" />
+    </xs:complexType>    
+  </xs:element>
+</xs:schema>
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="MyWordTemplateDefinition">
+    <xs:complexType>
+      <xs:sequence>
+          <!--<xs:element type="UserProvided" name="UserProvided" minOccurs="0" maxOccurs="unbounded" ></xs:element>
+          <xs:element type="Placeholders" name="Placeholders" minOccurs="0" maxOccurs="unbounded"></xs:element>-->
+          <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="Name" type="xs:string" use="required" />      
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="UserProvided">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UserInput">
+    <!--<xs:sequence>
+    </xs:sequence>-->
+    <xs:attribute name="Name" type="xs:string" use="required" />
+    <xs:attribute name="ID" type="xs:string" use="required" />
+    <xs:attribute name="Prompt" type="xs:string" use="required" /> 
+    <xs:attribute name="ValidateRegex" type="xs:string" /> 
+    <xs:attribute name="ConditionDateYoungerThan" type="xs:string" />                               
+  </xs:complexType>
+
+  <xs:complexType name="Placeholders">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Placeholder">
+    <!--<xs:sequence>
+    </xs:sequence>-->
+    <xs:attribute name="Name" type="xs:string" use="required" />
+    <xs:attribute name="ID" type="xs:string" use="required" />    
+  </xs:complexType>
+
+  <xs:complexType name="LoopInput">
+    <xs:sequence>
+      <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="xs:string" use="required" />
+    <xs:attribute name="ID" type="xs:string" use="required" /> 
+    <xs:attribute name="BreakKeyword" type="xs:string" use="required" />   
+    <xs:attribute name="Prompt" type="xs:string" use="required" /> 
+  </xs:complexType>
+
+  <xs:complexType name="ChoiceInput">
+    <xs:sequence>
+      <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="Name" type="xs:string" use="required" />
+    <xs:attribute name="ID" type="xs:string" use="required" /> 
+    <xs:attribute name="Prompt" type="xs:string" use="required" />
+    <xs:attribute name="FooterPrompt" type="xs:string" use="required" />
+    <xs:attribute name="ErrorPrompt" type="xs:string" use="required" />
+    <xs:attribute name="BreakKeyword" type="xs:string" use="required" />
+    <xs:attribute name="AllowMultiselect" type="xs:boolean" use="required" />
+  </xs:complexType>
+
+  <xs:complexType name="Choice">
+    <xs:sequence>
+      <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="ChoiceID" type="xs:string" use="required" />
+    <xs:attribute name="ChoiceText" type="xs:string" use="required" /> 
+  </xs:complexType>
+</xs:schema>

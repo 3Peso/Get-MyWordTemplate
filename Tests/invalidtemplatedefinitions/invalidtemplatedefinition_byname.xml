@@ -1,0 +1,6 @@
+<MyWordTemplateDefinition Name="validtemplatedefinition">
+    <UserProvide>
+        <UserInput Name="Test" Prompt="Enter a value" ID="SomeData" />
+        <UserInput Name="Test" Prompt="Enter a value" ID="SomeData2" />        
+    </UserProvide>
+</MyWordTemplateDefinition>
