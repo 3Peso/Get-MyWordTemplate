@@ -3,7 +3,7 @@
         <Userinput Name="Test" ID="test" Prompt="Enter Date" />
         <ChoiceInput Name="Choice" Prompt="Choice" ID="choice" 
             BreakKeyword="cancel" FooterPrompt="Choose" ErrorPrompt="Not allowed"
-            AllowMultiselect="True" MulitselectPrompt="Multi allowed">
+            AllowMultiselect="True" MulitselectPrompt="Multi allowed" EntrySeperator=" ">
             <Choice ChoiceID="1" ChoiceText="Choice 1" />
             <Choice ChoiceID="2" ChoiceText="Choice 2" />
             <Choice ChoiceID="3" ChoiceText="Choice 3" />

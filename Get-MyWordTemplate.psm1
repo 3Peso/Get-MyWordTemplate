@@ -184,22 +184,13 @@ function Set-LoopInput {
         [Parameter(Mandatory=$true)]
         [string]$inputName,
         [Parameter(Mandatory=$true)]
-        [Hashtable]$inputTable,
-        [string]$itemSeperator=$script:NEW_LINE_IN_WORD
+        [Hashtable]$inputTable
     )
 
     [string]$inputValue = ""
-    # TODO move to separate function
     # ensure the keys are sorted.
     $inputTable.GetEnumerator() | Sort-Object -Property key | foreach-object {
-        <#if($_.Name -notlike "*$script:LOOPEND_MARKER") {
-            Write-Verbose "Adding value '$($_[0].Value)' for key '$($_[0].Name)' ..."
-            $inputValue += "$($_[0].Value) "
-        } else {
-            $inputValue = $inputValue.Trim()
-            $inputValue += $itemSeperator
-        }#>
-        $inputValue += "$($_[0].Value)$itemSeperator"        
+        $inputValue += "$($_[0].Value)"        
     }
     $inputValue = $inputValue.TrimEnd(' ')
 
@@ -543,8 +534,18 @@ function Get-SeperatorFromInputElement {
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )
-    $seperator = ($null -eq $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text') ? $script:NEW_LINE_IN_WORD : 
-                    ($inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text' -eq 'NEWLINE') ? $script:NEW_LINE_IN_WORD : $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text'
+    $seperator = " "
+    if (-not ($null -eq $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text')) {
+        if($inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text' -eq 'NEWLINE') {
+            Write-Verbose "Seperator is NEWLINE"
+            $seperator = $script:NEW_LINE_IN_WORD
+        } else {
+            $seperator = $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text'
+            Write-Verbose "Seperator is '$seperator'"
+        }
+    }
+
+    Write-Verbose "Seperator '$seperator' will be returned."
     return $seperator
 }
 
