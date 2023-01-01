@@ -189,17 +189,18 @@ function Set-LoopInput {
 
     [string]$inputValue = ""
     # TODO move to separate function
-    # ensure the keys are sorted. This works because during input time in the loop every key had a counter prepended for the loop
+    # ensure the keys are sorted.
     $inputTable.GetEnumerator() | Sort-Object -Property key | foreach-object {
-        if($_.Name -notlike "*$script:LOOPEND_MARKER") {
+        <#if($_.Name -notlike "*$script:LOOPEND_MARKER") {
             Write-Verbose "Adding value '$($_[0].Value)' for key '$($_[0].Name)' ..."
             $inputValue += "$($_[0].Value) "
         } else {
             $inputValue = $inputValue.Trim()
             $inputValue += $itemSeperator
-        }      
+        }#>
+        $inputValue += "$($_[0].Value)$itemSeperator"        
     }
-    $inputValue = $inputValue.Trim()
+    $inputValue = $inputValue.TrimEnd(' ')
 
     $MatchCase = $false
     $MatchWholeWorld = $true
@@ -552,7 +553,7 @@ function Get-UserChoicesAsTable {
         [Parameter(Mandatory=$true)]
         [bool]$isMultiSelect
     )
-    $choices = @{}
+    $choices = [ordered]@{}
 
     if(-not $isMultiSelect) {
         # this will throw an exception if the function has been called with a comma seperated user input
@@ -562,7 +563,7 @@ function Get-UserChoicesAsTable {
         [int]$counter = 1
         $stringWithUserChoices -split "," | ForEach-Object {    
             $selectedValue = $allowedChoices[$_]
-            if($choices.ContainsValue($selectedValue)) {
+            if($selectedValue -in $choices.Values) {
                 throw "Multiple selections of the same value are not allowed."
             }
             $choices.Add("$choiceInputElementId$counter", $selectedValue)
@@ -615,7 +616,7 @@ function Get-UserChoices {
         [Parameter(Mandatory=$true)]
         [hashtable]$choiceInputChoices
     ) 
-    $choices = @{}
+    $choices = [ordered]@{}
 
     # prompt the user to select one of the choices
     $choiceInputElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text' 
@@ -623,13 +624,16 @@ function Get-UserChoices {
     $choiceInputElementPrompt = $inputElement.Attributes[$script:USER_PROMPT].'#text' + "`r`n"
     # Sort the Names of the hashtable keys. 
     # Normally we build the hashtable in ordered fashion, but the ordering is lost when handed over to this function which can only happen as hashtable
-    $choiceInputElementPrompt += $choiceInputChoices.Keys | Sort-Object -Property Name | ForEach-Object { "`r$($choiceInputChoices[$_]) ($_)`n" }
+    $choiceInputElementPrompt += $choiceInputChoices.Keys | Sort-Object | ForEach-Object {
+        Write-Verbose "Adding '$($choiceInputChoices[$_]) ($_)' to choice prompt ..."
+        "`r'$($choiceInputChoices[$_])' ($_)`n" 
+    }
     $choiceBreakSingnal = $inputElement.Attributes[$script:USER_LOOP_BREAK_SIGNAL].'#text'
     Write-Host $choiceInputElementPrompt
 
     [bool]$isMultiSelect = [System.Convert]::ToBoolean($inputElement.Attributes[$script:CHOICE_ALLOW_MULTI_SELECT].'#text')
     if($isMultiSelect) {
-        Write-Host $inputElement.Attributes[$script:USER_MULTISELECT_PROMPT].'#text' + "`r`n"
+        Write-Host "$($inputElement.Attributes[$script:USER_MULTISELECT_PROMPT].'#text')`r`n"
     }
 
     # check if the user entered a valid choice
@@ -693,7 +697,7 @@ function Get-ChoiceInput {
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )
-    $templateInput = @{}
+    $templateInput = [ordered]@{}
   
     $choiceInputChoices = Build-ChoiceTable -inputElement $inputElement
 

@@ -1,8 +1,9 @@
 <MyWordTemplateDefinition Name="testworddoc">
     <UserProvided>
         <Userinput Name="Test" ID="test" Prompt="Enter Date" />
-        <!--<Loop Name="Test Loop" ID="testloop" BreakKeyword="done" Prompt="Test Loop">
-            <Userinput Name="Test" ID="loopinput" Prompt="Enter Date" />          
-        </Loop>-->
+        <!--<LoopInput Name="Test Loop" ID="testloop" BreakKeyword="done" Prompt="Enter">
+            <UserInput Name="Item 1" Prompt="Item 1" ID="item1" />
+            <UserInput Name="Item 2" Prompt="Item 2" ID="item2" />
+        </LoopInput>-->
     </UserProvided>
 </MyWordTemplateDefinition>
