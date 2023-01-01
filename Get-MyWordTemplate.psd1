@@ -24,7 +24,7 @@ GUID = 'becce7a1-24f8-4960-8392-bdd7f65b3272'
 Author = '3Peso'
 
 # Company or vendor of this module
-CompanyName = 'BLKA'
+CompanyName = ''
 
 # Copyright statement for this module
 Copyright = '(c) 3Peso. All rights reserved.'
