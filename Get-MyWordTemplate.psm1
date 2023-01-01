@@ -14,6 +14,7 @@
 [string]$script:USER_PROMPT="Prompt"
 [string]$script:USER_FOOTER_PROMPT="FooterPrompt"
 [string]$script:USER_ERROR_PROMPT="ErrorPrompt"
+[string]$script:USER_MULTISELECT_PROMPT="MulitselectPrompt"
 [string]$script:USER_INPUT_ELEMENT="UserInput"
 [string]$script:LOOP_INPUT_ELEMENT="LoopInput"
 [string]$script:CHOICE_INPUT_ELEMENT="ChoiceInput"
@@ -182,7 +183,8 @@ function Set-LoopInput {
         [Parameter(Mandatory=$true)]
         [string]$inputName,
         [Parameter(Mandatory=$true)]
-        [Hashtable]$inputTable
+        [Hashtable]$inputTable,
+        [string]$itemSeperator=$script:NEW_LINE_IN_WORD
     )
 
     [string]$inputValue = ""
@@ -194,7 +196,7 @@ function Set-LoopInput {
             $inputValue += "$($_[0].Value) "
         } else {
             $inputValue = $inputValue.Trim()
-            $inputValue += $script:NEW_LINE_IN_WORD  
+            $inputValue += $itemSeperator
         }      
     }
     $inputValue = $inputValue.Trim()
@@ -271,6 +273,7 @@ function New-MyWordDocument {
         foreach ($key in $templateInput.Keys) {
             if($templateInput[$key] -is [string]) {
                 Set-TextInput -wordDoc $wordDoc -inputName $key -inputValue $templateInput[$key]
+            # this will handle inputs from Loop elements, and from ChoiceInput elements which allow multiple values
             } elseif ($templateInput[$key] -is [hashtable] -or $templateInput[$key] -is [ordered]) {
                 Set-LoopInput -wordDoc $wordDoc -inputName $key -inputTable $templateInput[$key]
             } else {
@@ -533,6 +536,77 @@ function Test-WordTemplatePlaceholders {
 
 #region Get-TemplateInput
 #region Get-ChoiceInput
+function Get-UserChoicesAsTable {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$choiceInputElementId,
+        # Hashtable with all the allowed choices
+        [Parameter(Mandatory=$true)]
+        [hashtable]$allowedChoices,
+        # This can be a single int in a string
+        # or a comma separated list of ints in a string if $isMultiSelect is true
+        # REMARKS: We assume here, that the user input already has been validated before calling this function
+        [Parameter(Mandatory=$true)]
+        [string]$stringWithUserChoices,
+        [Parameter(Mandatory=$true)]
+        [bool]$isMultiSelect
+    )
+    $choices = @{}
+
+    if(-not $isMultiSelect) {
+        # this will throw an exception if the function has been called with a comma seperated user input
+        $allowedChoiceID = $allowedChoices.Keys | Where-Object { $_ -eq [int]$stringWithUserChoices }          
+        $choices.Add($choiceInputElementId, $allowedChoices[$allowedChoiceID])
+    } else {
+        [int]$counter = 1
+        $stringWithUserChoices -split "," | ForEach-Object {    
+            $selectedValue = $allowedChoices[$_]
+            if($choices.ContainsValue($selectedValue)) {
+                throw "Multiple selections of the same value are not allowed."
+            }
+            $choices.Add("$choiceInputElementId$counter", $selectedValue)
+            $counter++
+        }
+    }   
+    
+    return $choices
+}
+
+function Test-UserChoice {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [bool]$isMultiSelect,
+        [Parameter(Mandatory=$true)]
+        [string]$choiceInputElementChoice,
+        [Parameter(Mandatory=$true)]
+        [array]$allowedChoiceIDs
+    )
+    $valid = $true
+
+    if (-not $isMultiSelect) {
+        $valid = ($choiceInputElementChoice -match "^[0-9]+$") -and ($choiceInputElementChoice -in $allowedChoiceIDs)
+    } elseif ($isMultiSelect -and $choiceInputElementChoice -match "^[0-9]+(,[0-9]+)*$") {
+        # check if all choices are unique
+        $choiceInputElementChoices = $choiceInputElementChoice -split ","
+        $uniqueChoices = $choiceInputElementChoices | Select-Object -Unique
+        if ($uniqueChoices.Count -eq $choiceInputElementChoices.Count) {
+            $uniqueChoices | ForEach-Object {
+                if (-not ($_ -in $allowedChoiceIDs)) {
+                    $valid = $false
+                    break
+                }
+            }
+        } else {
+            $valid = $false
+        }
+    }
+
+    return $valid
+}
+
+
 function Get-UserChoices {
     [CmdletBinding()]
     param(
@@ -545,31 +619,34 @@ function Get-UserChoices {
 
     # prompt the user to select one of the choices
     $choiceInputElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text' 
-    [bool]$isMultiSelect = [System.Convert]::ToBoolean($inputElement.Attributes[$script:CHOICE_ALLOW_MULTI_SELECT].'#text')
+
     $choiceInputElementPrompt = $inputElement.Attributes[$script:USER_PROMPT].'#text' + "`r`n"
-    $choiceInputElementPrompt += $choiceInputChoices.Keys | ForEach-Object { "`r$($choiceInputChoices[$_]) ($_)`n" }
+    # Sort the Names of the hashtable keys. 
+    # Normally we build the hashtable in ordered fashion, but the ordering is lost when handed over to this function which can only happen as hashtable
+    $choiceInputElementPrompt += $choiceInputChoices.Keys | Sort-Object -Property Name | ForEach-Object { "`r$($choiceInputChoices[$_]) ($_)`n" }
     $choiceBreakSingnal = $inputElement.Attributes[$script:USER_LOOP_BREAK_SIGNAL].'#text'
-    Write-Host $choiceInputElementPrompt.Trim()
+    Write-Host $choiceInputElementPrompt
+
+    [bool]$isMultiSelect = [System.Convert]::ToBoolean($inputElement.Attributes[$script:CHOICE_ALLOW_MULTI_SELECT].'#text')
+    if($isMultiSelect) {
+        Write-Host $inputElement.Attributes[$script:USER_MULTISELECT_PROMPT].'#text' + "`r`n"
+    }
+
     # check if the user entered a valid choice
     [bool]$choiceValid = $false
     do {
         $choiceInputElementChoice = "$($inputElement.Attributes[$script:USER_FOOTER_PROMPT].'#text') ('$choiceBreakSingnal' to stop script)"
-        $choiceInputElementChoice = Read-Host $choiceInputElementChoice
-
-        $choiceValid = $choiceInputElementChoice -match "^[0-9]+$"        
+        $choiceInputElementChoice = Read-Host $choiceInputElementChoice 
         # exit script execution if the user entered break keyword
         if ($choiceInputElementChoice -eq $choiceBreakSingnal) {
             throw "User canceled script execution."
         }
 
-        $choiceInputElementChoice = $choiceInputChoices.Keys | Where-Object { $_ -eq [int]$choiceInputElementChoice }      
-        if (-not $choiceValid -or $null -eq $choiceInputElementChoice) {  
-            Write-Host $inputElement.Attributes[$script:USER_ERROR_PROMPT].'#text' -ForegroundColor Yellow
-        } else {
-            $choices.Add($choiceInputElementId, $choiceInputChoices[$choiceInputElementChoice])
-        }
-    } while (-not $choiceValid -or $null -eq $choiceInputElementChoice)
-    
+        $choiceValid = Test-UserChoice -isMultiSelect $isMultiSelect -choiceInputElementChoice $choiceInputElementChoice -allowedChoiceIDs $choiceInputChoices.Keys
+        $choiceInputElementChoice = Get-UserChoicesAsTable -choiceInputElementId $choiceInputElementId -allowedChoices $choiceInputChoices -stringWithUserChoices $choiceInputElementChoice -isMultiSelect $isMultiSelect
+    } while (-not $choiceValid -or $null -eq $choiceInputElementChoice -or $choiceInputElementChoice.Count -eq 0)
+    $choices = $choiceInputElementChoice
+
     return $choices
 }
 
@@ -579,7 +656,7 @@ function Build-ChoiceTable {
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )    
-    $choiceInputChoices = @{}
+    $choiceInputChoices = [ordered]@{}
 
     $choiceInputElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text'
     foreach ($choiceElement in $inputElement.ChildNodes) {
@@ -593,6 +670,7 @@ function Build-ChoiceTable {
             }
             $choiceElementId = $choiceElement.Attributes[$script:CHOICE_ID].'#text'
             $choiceElementText = $choiceElement.Attributes[$script:CHOICE_TEXT].'#text'
+            Write-Verbose "Adding choice '$choiceElementText' with id '$choiceElementId' to choice input element '$choiceInputElementId'"
             $choiceInputChoices.Add($choiceElementId, $choiceElementText)
         }
     }

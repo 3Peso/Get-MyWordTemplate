@@ -879,10 +879,12 @@ InModuleScope Get-MyWordTemplate {
                 </$script:CHOICE_INPUT_ELEMENT>
 "@
                 $result = Build-ChoiceTable -inputElement $xml.DocumentElement
-                $result | Should -BeOfType [hashtable]
+                $result | Should -BeOfType [ordered]
                 $result.Keys | Should -HaveCount 2
                 $result["1"] | Should -Be "choice1"
                 $result["2"] | Should -Be "choice2"
+                $result.Values[0] | Should -Be "choice1"
+                $result.Values[1] | Should -Be "choice2"
             }
         }
 
@@ -937,6 +939,8 @@ InModuleScope Get-MyWordTemplate {
                 </$script:CHOICE_INPUT_ELEMENT>
 "@               
                 Mock Read-Host { return '1' }
+                Mock Test-UserChoice { return $true }
+                Mock Get-UserChoicesAsTable { return @{"choice"="choice1"} }                  
                 $result = Get-UserChoices -choiceInputChoices @{'1'='choice1';'2'='choice2'} -inputElement $xml.DocumentElement
                 $result["choice"] | Should -Be "choice1"
             }
@@ -951,6 +955,8 @@ InModuleScope Get-MyWordTemplate {
                 </$script:CHOICE_INPUT_ELEMENT>
 "@                  
                 Mock Read-Host { return '2' }
+                Mock Test-UserChoice { return $true }
+                Mock Get-UserChoicesAsTable { return @{"choice"="choice2"} }                
                 $result = Get-UserChoices -choiceInputChoices @{'1'='choice1';'2'='choice2'}  -inputElement $xml.DocumentElement
                 $result["choice"] | Should -Be "choice2"
             }            
@@ -965,8 +971,118 @@ InModuleScope Get-MyWordTemplate {
                 </$script:CHOICE_INPUT_ELEMENT>
 "@                  
                 Mock Read-Host { return 'cancel' }
+                Mock Test-UserChoice { return $true }
+                Mock Get-UserChoicesAsTable { return @{} }
                 { Get-UserChoices -choiceInputChoices @{'1'='choice1';'2'='choice2'} -inputElement $xml.DocumentElement } | Should -Throw
+            }  
+            
+            It 'should return a list of choices if multi-select is allowed' {
+                [xml]$xml = @"
+                <$script:CHOICE_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="choice" $script:ELEMENT_ID="choice" 
+                $script:USER_PROMPT="choice prompt" $script:USER_FOOTER_PROMPT="footer prompt" $script:USER_ERROR_PROMPT="error prompt" 
+                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="true" $script:USER_MULTISELECT_PROMPT="Multi Select Prompt">
+                    <$script:CHOICE_ELEMENT $script:CHOICE_ID="1" $script:CHOICE_TEXT="choice1" />
+                    <$script:CHOICE_ELEMENT $script:CHOICE_ID="2" $script:CHOICE_TEXT="choice2" />
+                </$script:CHOICE_INPUT_ELEMENT>
+"@
+                Mock Read-Host { return '1,2' }
+                Mock Test-UserChoice { return $true }
+                #Mock Get-UserChoicesAsTable { return @{} }
+                $result = Get-UserChoices -choiceInputChoices @{'1'='choice1';'2'='choice2'} -inputElement $xml.DocumentElement
+                $result["choice1"] | Should -Be "choice1"
+                $result["choice2"] | Should -Be "choice2"
+            }
+        }
+    }
+
+    Describe 'Test-UserChoice' {
+        Context 'when called with a valid choice' {
+            It 'should return true if the choice is valid' {
+                $choice="1"
+                $isMultiSelect=$false
+                $allowedChoiceIDs=@(1,2)
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $true
+            }
+
+            It 'should return true if the choice is valid' {
+                $choice="1,2"
+                $isMultiSelect=$true
+                $allowedChoiceIDs=@(1,2,3)                
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $true
             }            
+        }
+
+        Context 'when called with an invalid choice' {
+            It 'should return false if multi select is active but user selected an item more than once' {
+                $choice="3,2,3"
+                $isMultiSelect=$true
+                $allowedChoiceIDs=@(1,2,3)                  
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $false
+            }    
+            
+            It 'should return false if multi select is not active but user selected more items than one' {
+                $choice="3,2"
+                $isMultiSelect=$false
+                $allowedChoiceIDs=@(1,2,3)                  
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $false
+            }  
+            
+            It 'should return false if multi is selected but user selected an item that is not allowed' {
+                $choice="3,2"
+                $isMultiSelect=$true
+                $allowedChoiceIDs=@(1,2)                  
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $false
+            }
+
+            It 'should return false if multi is not selected but user selected an item that is not allowed' {
+                $choice="3"
+                $isMultiSelect=$false
+                $allowedChoiceIDs=@(1,2)                  
+                
+                Test-UserChoice -choiceInputElementChoice $choice -isMultiSelect $isMultiSelect -allowedChoiceIDs $allowedChoiceIDs | Should -Be $false
+            }
+        }
+    }
+
+    Describe 'Get-UserChoicesAsTable' {
+        Context 'when called with a valid choice' {
+            It 'should return a hashtable with the one choice' {
+                $userChoice="1"
+                $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
+                $isMultiSelect=$false
+                $result = Get-UserChoicesAsTable -choiceInputElementId "choice" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect
+                $result["choice"] | Should -Be "choice1"
+            }
+
+            It 'should return a hashtable with the two choices' {
+                $userChoice="1,2"
+                $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
+                $isMultiSelect=$true
+                $result = Get-UserChoicesAsTable -choiceInputElementId "hoist" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect
+                $result["hoist1"] | Should -Be "choice1"
+                $result["hoist2"] | Should -Be "choice2"
+            }
+        }
+
+        Context 'when called with invalid choice' {
+            It 'should throw an exception if the user string is not a singular number' {
+                $userChoice="1,2"
+                $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
+                $isMultiSelect=$false
+                { Get-UserChoicesAsTable -choiceInputElementId "hoist" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect } | Should -Throw
+            }
+
+            It 'should throw an exception if multi select is on and user selected an item more than once' {
+                $userChoice="1,2,1"
+                $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
+                $isMultiSelect=$true
+                { Get-UserChoicesAsTable -choiceInputElementId "hoist" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect } | Should -Throw
+            }
         }
     }
 }
