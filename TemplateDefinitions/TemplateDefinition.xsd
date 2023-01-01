@@ -1,46 +1,4 @@
 <?xml version="1.0"?>
-<!--
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:element name="MyWordTemplateDefinition">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="1" name="UserProvided">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element minOccurs="0" maxOccurs="unbounded" name="UserInput">
-                <xs:complexType>
-                  <xs:attribute name="Name" type="xs:string" use="required" />
-                  <xs:attribute name="ID" type="xs:string" use="required" />
-                  <xs:attribute name="Prompt" type="xs:string" use="required" /> 
-                  <xs:attribute name="ValidateRegex" type="xs:string" /> 
-                  <xs:attribute name="ConditionDateYoungerThan" type="xs:string" />                               
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:element minOccurs="0" maxOccurs="1" name="Placeholders">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element minOccurs="0" maxOccurs="unbounded" name="Placeholder">
-                <xs:complexType>     
-                  <xs:simpleContent>
-                    <xs:extension base="xs:string">
-                      <xs:attribute name="Name" type="xs:string" use="required" />
-                      <xs:attribute name="ID" type="xs:string" use="required" />
-                    </xs:extension>
-                  </xs:simpleContent>                               
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>        
-      </xs:sequence>
-      <xs:attribute name="Name" type="xs:string" use="required" />
-    </xs:complexType>    
-  </xs:element>
-</xs:schema>
--->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="MyWordTemplateDefinition">
     <xs:complexType>
@@ -90,6 +48,7 @@
     <xs:attribute name="ID" type="xs:string" use="required" /> 
     <xs:attribute name="BreakKeyword" type="xs:string" use="required" />   
     <xs:attribute name="Prompt" type="xs:string" use="required" /> 
+    <xs:attribute name="Entryseperator" type="xs:string" />
   </xs:complexType>
 
   <xs:complexType name="ChoiceInput">
@@ -104,6 +63,7 @@
     <xs:attribute name="BreakKeyword" type="xs:string" use="required" />
     <xs:attribute name="AllowMultiselect" type="xs:boolean" use="required" />
     <xs:attribute name="MulitselectPrompt" type="xs:string" />
+    <xs:attribute name="Entryseperator" type="xs:string" />
   </xs:complexType>
 
   <xs:complexType name="Choice">

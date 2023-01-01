@@ -2,12 +2,12 @@ Import-Module .\Get-MyWordTemplate.psm1 -Force
 
 InModuleScope Get-MyWordTemplate {
     BeforeAll {
-        $script:verbPref = $VerbosePreference
-        $VerbosePreference = 'Continue'            
+        #$script:verbPref = $VerbosePreference
+        #$VerbosePreference = 'Continue'            
     }
 
     AfterAll {
-        $VerbosePreference = $script:verbPref
+        #$VerbosePreference = $script:verbPref
     }
 
     Describe 'Get-MyWordTemplateNames' {   
@@ -444,7 +444,8 @@ InModuleScope Get-MyWordTemplate {
         Context 'when called with a valid loop' {
             It 'should return a hashtable with two entries' {
                 [xml]$inputElement = @"
-                <$script:LOOP_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="Test Loop" $script:ELEMENT_ID="testloop" $script:USER_LOOP_BREAK_SIGNAL="done" $script:USER_PROMPT="Loop Prompt">
+                <$script:LOOP_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="Test Loop" $script:ELEMENT_ID="testloop" $script:USER_LOOP_BREAK_SIGNAL="done" $script:USER_PROMPT="Loop Prompt"
+                 $script:INPUT_ENTRY_SEPERATOR="NEWLINE">
                     <$script:USER_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="Test Entry" $script:USER_PROMPT="Test Entry" $script:ELEMENT_ID="testentry" />  
                     <$script:USER_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="Test Entry ID" $script:USER_PROMPT="Test Entry" $script:ELEMENT_ID="testentryid" />                                    
                 </$script:LOOP_INPUT_ELEMENT>
@@ -464,9 +465,11 @@ InModuleScope Get-MyWordTemplate {
                     $script:mockCounter++
                     return $returnValue
                 }
+                Mock Get-SeperatorFromInputElement { return "`r"}
 
                 $result = Get-LoopInput -inputElement $inputElement.DocumentElement
                 $result.Count | Should -Be 3
+                $result.Values[1] | Should -be "testid`r"
                 $result.Keys[2] | Should -be "1$script:LOOPEND_MARKER"
             }
 
@@ -495,6 +498,7 @@ InModuleScope Get-MyWordTemplate {
                     $script:mockCounter++
                     return $returnValue
                 }
+                Mock Get-SeperatorFromInputElement { return ""}                
 
                 $result = Get-LoopInput -inputElement $inputElement.DocumentElement
                 $result.Count | Should -Be 4
@@ -947,7 +951,7 @@ InModuleScope Get-MyWordTemplate {
                 [xml]$xml = @"
                 <$script:CHOICE_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="choice" $script:ELEMENT_ID="choice" 
                 $script:USER_PROMPT="choice prompt" $script:USER_FOOTER_PROMPT="footer prompt" $script:USER_ERROR_PROMPT="error prompt" 
-                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false">
+                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false" $script:INPUT_ENTRY_SEPERATOR=" ">
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="1" $script:CHOICE_TEXT="choice1" />
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="2" $script:CHOICE_TEXT="choice2" />
                 </$script:CHOICE_INPUT_ELEMENT>
@@ -963,7 +967,7 @@ InModuleScope Get-MyWordTemplate {
                 [xml]$xml = @"
                 <$script:CHOICE_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="choice" $script:ELEMENT_ID="choice" 
                 $script:USER_PROMPT="choice prompt" $script:USER_FOOTER_PROMPT="footer prompt" $script:USER_ERROR_PROMPT="error prompt" 
-                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false">
+                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false" $script:INPUT_ENTRY_SEPERATOR=" ">
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="1" $script:CHOICE_TEXT="choice1" />
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="2" $script:CHOICE_TEXT="choice2" />
                 </$script:CHOICE_INPUT_ELEMENT>
@@ -979,7 +983,7 @@ InModuleScope Get-MyWordTemplate {
                 [xml]$xml = @"
                 <$script:CHOICE_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="choice" $script:ELEMENT_ID="choice" 
                 $script:USER_PROMPT="choice prompt" $script:USER_FOOTER_PROMPT="footer prompt" $script:USER_ERROR_PROMPT="error prompt" 
-                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false">
+                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="false" $script:INPUT_ENTRY_SEPERATOR=" ">
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="1" $script:CHOICE_TEXT="choice1" />
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="2" $script:CHOICE_TEXT="choice2" />
                 </$script:CHOICE_INPUT_ELEMENT>
@@ -994,7 +998,8 @@ InModuleScope Get-MyWordTemplate {
                 [xml]$xml = @"
                 <$script:CHOICE_INPUT_ELEMENT $script:TEMPLATE_DEFINITION_NAME="choice" $script:ELEMENT_ID="choice" 
                 $script:USER_PROMPT="choice prompt" $script:USER_FOOTER_PROMPT="footer prompt" $script:USER_ERROR_PROMPT="error prompt" 
-                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="true" $script:USER_MULTISELECT_PROMPT="Multi Select Prompt">
+                $script:USER_LOOP_BREAK_SIGNAL="cancel" $script:CHOICE_ALLOW_MULTI_SELECT="true" $script:USER_MULTISELECT_PROMPT="Multi Select Prompt"
+                $script:INPUT_ENTRY_SEPERATOR=" ">
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="1" $script:CHOICE_TEXT="choice1" />
                     <$script:CHOICE_ELEMENT $script:CHOICE_ID="2" $script:CHOICE_TEXT="choice2" />
                 </$script:CHOICE_INPUT_ELEMENT>
@@ -1003,8 +1008,8 @@ InModuleScope Get-MyWordTemplate {
                 Mock Test-UserChoice { return $true }
                 #Mock Get-UserChoicesAsTable { return @{} }
                 $result = Get-UserChoices -choiceInputChoices @{'1'='choice1';'2'='choice2'} -inputElement $xml.DocumentElement
-                $result["choice1"] | Should -Be "choice1"
-                $result["choice2"] | Should -Be "choice2"
+                $result["choice1"] | Should -Be "choice1 "
+                $result["choice2"] | Should -Be "choice2 "
             }
         }
     }
@@ -1078,8 +1083,8 @@ InModuleScope Get-MyWordTemplate {
                 $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
                 $isMultiSelect=$true
                 $result = Get-UserChoicesAsTable -choiceInputElementId "hoist" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect
-                $result["hoist1"] | Should -Be "choice1"
-                $result["hoist2"] | Should -Be "choice2"
+                $result["hoist1"] | Should -Be "choice1 "
+                $result["hoist2"] | Should -Be "choice2 "
             }
         }
 

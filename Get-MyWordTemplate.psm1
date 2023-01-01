@@ -8,6 +8,7 @@
 [string]$script:PLACEHOLDER_POSTFIX="@!"
 [string]$script:LOOPEND_MARKER="_loopend"
 [string]$script:NEW_LINE_IN_WORD="`r"
+[string]$script:INPUT_ENTRY_SEPERATOR="EntrySeperator"
 [string]$script:CONDITION_PREFIX="Condition"
 [string]$script:YOUNGER_DATE_CONDITION="ConditionDateYoungerThan"
 [string]$script:TEMPLATE_DEFINITION_NAME="Name"
@@ -536,6 +537,17 @@ function Test-WordTemplatePlaceholders {
 #endregion Validation Functions
 
 #region Get-TemplateInput
+function Get-SeperatorFromInputElement {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Xml.XmlElement]$inputElement
+    )
+    $seperator = ($null -eq $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text') ? $script:NEW_LINE_IN_WORD : 
+                    ($inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text' -eq 'NEWLINE') ? $script:NEW_LINE_IN_WORD : $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text'
+    return $seperator
+}
+
 #region Get-ChoiceInput
 function Get-UserChoicesAsTable {
     [CmdletBinding()]
@@ -551,7 +563,8 @@ function Get-UserChoicesAsTable {
         [Parameter(Mandatory=$true)]
         [string]$stringWithUserChoices,
         [Parameter(Mandatory=$true)]
-        [bool]$isMultiSelect
+        [bool]$isMultiSelect,
+        [string]$seperator = " "
     )
     $choices = [ordered]@{}
 
@@ -563,10 +576,10 @@ function Get-UserChoicesAsTable {
         [int]$counter = 1
         $stringWithUserChoices -split "," | ForEach-Object {    
             $selectedValue = $allowedChoices[$_]
-            if($selectedValue -in $choices.Values) {
+            if("$selectedValue$seperator" -in $choices.Values) {
                 throw "Multiple selections of the same value are not allowed."
             }
-            $choices.Add("$choiceInputElementId$counter", $selectedValue)
+            $choices.Add("$choiceInputElementId$counter", "$selectedValue$seperator")
             $counter++
         }
     }   
@@ -636,6 +649,7 @@ function Get-UserChoices {
         Write-Host "$($inputElement.Attributes[$script:USER_MULTISELECT_PROMPT].'#text')`r`n"
     }
 
+    $seperator = $seperator = Get-SeperatorFromInputElement -inputElement $inputElement
     # check if the user entered a valid choice
     [bool]$choiceValid = $false
     do {
@@ -647,7 +661,8 @@ function Get-UserChoices {
         }
 
         $choiceValid = Test-UserChoice -isMultiSelect $isMultiSelect -choiceInputElementChoice $choiceInputElementChoice -allowedChoiceIDs $choiceInputChoices.Keys
-        $choiceInputElementChoice = Get-UserChoicesAsTable -choiceInputElementId $choiceInputElementId -allowedChoices $choiceInputChoices -stringWithUserChoices $choiceInputElementChoice -isMultiSelect $isMultiSelect
+
+        $choiceInputElementChoice = Get-UserChoicesAsTable -choiceInputElementId $choiceInputElementId -allowedChoices $choiceInputChoices -stringWithUserChoices $choiceInputElementChoice -isMultiSelect $isMultiSelect -seperator $seperator
     } while (-not $choiceValid -or $null -eq $choiceInputElementChoice -or $choiceInputElementChoice.Count -eq 0)
     $choices = $choiceInputElementChoice
 
@@ -721,6 +736,7 @@ function Get-LoopChild {
         [int]$loopCounter
     )
     $templateInput = [ordered]@{}
+    $seperator = Get-SeperatorFromInputElement -inputElement $loopElement
 
     foreach ($loopChildElement in $loopElement.ChildNodes) {
         if($loopChildElement -is [System.Xml.XmlElement]) {
@@ -743,7 +759,7 @@ function Get-LoopChild {
             Write-Verbose "User input for element '$($loopChildElement.Name)' is '$userEntry'"
             if(-not ($userEntry -eq $breakkeyword)) {
                 # add the user input to the iteration input hashtable
-                $templateInput.Add($elementId, $userEntry)
+                $templateInput.Add($elementId, "$userEntry$seperator")
             } else {
                 Write-Verbose "Input is '$userEntry'. Breaking input loop."
                 $templateInput.Add($breakkeyword, $breakkeyword)
