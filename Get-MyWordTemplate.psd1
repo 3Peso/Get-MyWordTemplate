@@ -27,7 +27,7 @@ Author = '3Peso'
 CompanyName = ''
 
 # Copyright statement for this module
-Copyright = '(c) 3Peso. All rights reserved.'
+Copyright = ''
 
 # Description of the functionality provided by this module
 # Description = ''
