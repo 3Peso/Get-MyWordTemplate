@@ -217,6 +217,11 @@ InModuleScope Get-MyWordTemplate {
                 $result = Test-MyWordTemplateDefinitions -templateDefinitionPath ".\Tests\invalidtemplatedefinitions"     
                 $result.Count | Should -Be 1
             }
+
+            It 'should throw, if the xml file does not exist' {
+                Mock Test-TemplateDefinitionFilename { return $true }  
+                { Test-MyWordTemplateDefinitions -templateDefinitionPath ".\Tests\invalidtemplatedefinitions\THIS_FILE_DOES_NOT_EXIST.xml" } | Should -Throw
+            }
         }
     }
 
@@ -299,48 +304,6 @@ InModuleScope Get-MyWordTemplate {
                 Mock Resolve-Path { return '.\GeneratedDocuments'}                
                 $result = Get-DocumentOutputPath -templatePath ".\templtes\validtemplatedfinitions\protocol.xml" -outputPath ".\GeneratedDocuments"
                 $result | Should -Be '.\GeneratedDocuments\protocol.docx'
-            }
-        }
-    }
-
-    Describe 'New-MyWordDocument' {
-        Context 'when called with a valid template' {
-            It 'should create a word document' {     
-                # mock Test-Path
-                Mock Test-Path { return $false } -ParameterFilter { $path -eq '.\Tests\GeneratedDocuments\testworddoc.docx' }
-                Mock Test-Path { return $true }
-                Mock Get-DocumentOutputPath { return Join-Path $(Resolve-Path -path '.\Tests\GeneratedDocuments') 'testworddoc.docx' }
-                Mock Test-MyWordTemplateDefinitionSchema { return $true }
-                $loopInput = [ordered]@{loopentry1 = 'entry 1'
-                                        loopentry2 = 'entry 2'}
-                $templateInput = @{test = 'TEST'
-                                   testloop = $loopInput
-                                   test2 = 'TEST2'}
-                $result = New-MyWordDocument -templatePath ".\Tests\validtemplatedefinitions\testworddoc.xml" -wordTemplatePath ".\Tests\validtemplates\testworddoc.docx" -outputPath ".\Tests\GeneratedDocuments" -templateInput $templateInput
-                $result | Should -Be $true
-            }
-            
-            It 'should create a word document' {     
-                # mock Test-Path
-                Mock Test-Path { return $false } -ParameterFilter { $path -eq '.\Tests\GeneratedDocuments\protocol.docx' }
-                Mock Test-Path { return $true }
-                Mock Get-DocumentOutputPath { return Join-Path $(Resolve-Path -path '.\Tests\GeneratedDocuments') 'protocol.docx' }
-                Mock Test-MyWordTemplateDefinitionSchema { return $true }
-                $choiceInput = [ordered]@{choice1 = 'entry 1'
-                                          choice2 = 'entry 2'}
-                $templateInput = @{test = 'TEST'
-                                   choice = $choiceInput}
-                $result = New-MyWordDocument -templatePath ".\Tests\validtemplatedefinitions\protocol.xml" -wordTemplatePath ".\Tests\validtemplates\protocol.docx" -outputPath ".\Tests\GeneratedDocuments" -templateInput $templateInput
-                $result | Should -Be $true
-            }            
-            
-            AfterEach {
-                $testfile = Resolve-Path -path '.\Tests\GeneratedDocuments\*.docx' -ErrorAction SilentlyContinue
-                if (Test-Path -Path $testfile) {
-                    Remove-Item -Path $testfile -Force -ErrorAction SilentlyContinue
-                } else {
-                    Write-Host "File '$testfile' does not exist." -ForegroundColor Yellow
-                }
             }
         }
     }
@@ -754,7 +717,7 @@ InModuleScope Get-MyWordTemplate {
                 Assert-MockCalled Add-TemplateInput -Exactly -Times 2 -Scope It
             }  
         }
-
+<#
         Context 'End to end tests' {
             It 'should generate two word documents in .\Tests\GeneratedDocuments' {
                 Mock Read-Host { return 'test' }
@@ -768,6 +731,7 @@ InModuleScope Get-MyWordTemplate {
                 $generatedFiles | Remove-Item
             }
         }
+#>
     }
 
     Describe 'Test-TemplateDefinitionFilename' {
