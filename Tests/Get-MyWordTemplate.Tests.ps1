@@ -431,6 +431,9 @@ InModuleScope Get-MyWordTemplate {
                 Mock Get-SeperatorFromInputElement { return "`r"}
 
                 $result = Get-LoopInput -inputElement $inputElement.DocumentElement
+                Write-Host $result[0]
+                Write-Host $result[1]
+                Write-Host $result[2]
                 $result.Count | Should -Be 3
                 $result.Values[1] | Should -be "testid`r"
                 $result.Keys[2] | Should -be "1$script:LOOPEND_MARKER"
@@ -717,26 +720,11 @@ InModuleScope Get-MyWordTemplate {
                 Assert-MockCalled Add-TemplateInput -Exactly -Times 2 -Scope It
             }  
         }
-<#
-        Context 'End to end tests' {
-            It 'should generate two word documents in .\Tests\GeneratedDocuments' {
-                Mock Read-Host { return 'test' }
-                Get-MyWordTemplate -templateType 'protocol','testworddoc' -outputpath '.\Tests\GeneratedDocuments' -wordTemplatePath '.\Tests\validtemplates' -templatePath '.\Tests\validtemplatedefinitions'
-            }
-            
-            AfterEach {
-                $generatedFiles = Get-ChildItem -Path '.\Tests\GeneratedDocuments'
-                $generatedFiles | ForEach-Object { Write-Verbose "File $($_.Name) was generated." }
-                Write-Verbose "Removing generated files."
-                $generatedFiles | Remove-Item
-            }
-        }
-#>
     }
 
     Describe 'Test-TemplateDefinitionFilename' {
         Context 'when called with a valid template definition filename' {
-            It 'should return true' {
+            It 'should return true' {               
                 Test-TemplateDefinitionFilename -templateDefinitionFilePath '.\Tests\validtemplatedefinitions\protocol.xml' | Should -BeTrue
             }
         }
