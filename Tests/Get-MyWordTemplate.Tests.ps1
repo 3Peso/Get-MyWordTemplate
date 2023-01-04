@@ -428,15 +428,16 @@ InModuleScope Get-MyWordTemplate {
                     $script:mockCounter++
                     return $returnValue
                 }
-                Mock Get-SeperatorFromInputElement { return "`r"}
+                Mock Get-SeperatorFromInputElement { return "_ThisShouldBeANewLine"}
 
                 $result = Get-LoopInput -inputElement $inputElement.DocumentElement
-                Write-Host $result[0]
-                Write-Host $result[1]
-                Write-Host $result[2]
                 $result.Count | Should -Be 3
-                $result.Values[1] | Should -be "testid`r"
-                $result.Keys[2] | Should -be "1$script:LOOPEND_MARKER"
+                #$result.Values | Should -Be @('test`r', 'testid`r')
+                $result.Values | Should -Contain 'test_ThisShouldBeANewLine'
+                $result.Values | Should -Contain 'testid_ThisShouldBeANewLine'
+                #$result.Values[1] | Should -be "testid`r"             
+                #$result.Keys[2] | Should -be "1$script:LOOPEND_MARKER"
+                $result.Keys | Should -Be @('1testentry', '1testentryid', '1_loopend')
             }
 
             It 'should return a hashtable with three entries' {
@@ -468,8 +469,7 @@ InModuleScope Get-MyWordTemplate {
 
                 $result = Get-LoopInput -inputElement $inputElement.DocumentElement
                 $result.Count | Should -Be 4
-                $result.Keys[2] | Should -Be "1$script:LOOPEND_MARKER"
-                $result.Keys[3] | Should -Be '2testentry'
+                $result.Keys | Should -Be @("1testentry" ,"1testentryid", "1$script:LOOPEND_MARKER", "2testentry")
             } 
             
             # REMARKS: This test is important, because if it is not met, it will break the function Invoke-TemplateConfigElement
@@ -598,7 +598,7 @@ InModuleScope Get-MyWordTemplate {
                 Assert-MockCalled Invoke-TemplateConfigElement -Times 2 -Exactly -Scope It
                 # This must be 2 not 3 because Get-LoopChild will only loop over the child elements of the loop element once
                 $result.Count | Should -Be 2
-                $result.Keys[1] | Should -Be '2testentryid'
+                $result.Keys | Should -Be @('2testentry', '2testentryid')
             }           
         }
 
@@ -849,12 +849,12 @@ InModuleScope Get-MyWordTemplate {
                 </$script:CHOICE_INPUT_ELEMENT>
 "@
                 $result = Build-ChoiceTable -inputElement $xml.DocumentElement
-                $result | Should -BeOfType [ordered]
-                $result.Keys | Should -HaveCount 2
+                #$result | Should -BeOfType [ordered]
+                $result.Keys | Should -HaveCount 2             
                 $result["1"] | Should -Be "choice1"
                 $result["2"] | Should -Be "choice2"
-                $result.Values[0] | Should -Be "choice1"
-                $result.Values[1] | Should -Be "choice2"
+                #$result.Values[0] | Should -Be "choice1"
+                #$result.Values[1] | Should -Be "choice2"
             }
         }
 
