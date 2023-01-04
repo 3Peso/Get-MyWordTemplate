@@ -426,7 +426,7 @@ function Test-TemplateDefinitionFilename {
     # validate the Name attribute of the TemplateDefinition element against the filename
     $xml = [xml](Get-Content -path $templateDefinitionFilePath)
     $templateDefinitionName = $xml.MyWordTemplateDefinition.Attributes[$script:TEMPLATE_DEFINITION_NAME].'#text'
-    if ($templateDefinitionName -ne (Split-Path -path $templateDefinitionFilePath -LeafBase)) {
+    if ($templateDefinitionName -ne ([System.IO.Path]::GetFileNameWithoutExtension($templateDefinitionFilePath))) {
         Write-Host "Template defintion file '$($templateDefinitionFilePath)' invalid." -ForegroundColor Red
         Write-Host "`tThe Name attribute of the MyWordTemplateDefinition element does not match the filename."
         $valid = $false
