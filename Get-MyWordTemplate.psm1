@@ -453,7 +453,7 @@ function Test-MyWordTemplateDefinitions {
         }
 
         # validate the Name attribute of the TemplateDefinition element against the filename
-        if (-not (Test-TemplateDefinitionFilename -templateDefinitionFilePath $xmlFile)) {
+        if (-not (Test-TemplateDefinitionFilename -templateDefinitionFilePath $xmlFile.FullName)) {
             $invalidSchemaFiles += $xmlFile.FullName
         }
     }
