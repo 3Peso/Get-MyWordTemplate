@@ -322,7 +322,6 @@ function Test-HasCondition {
 function Test-UserInputCondition {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
         [string]$inputString,
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
@@ -331,7 +330,7 @@ function Test-UserInputCondition {
     $conditionMet = $true
 
     $dateTableKey = $inputElement.Attributes[$script:YOUNGER_DATE_CONDITION].'#text'
-    if($dateTableKey) {
+    if($dateTableKey -and $null -ne $inputString) {
         $dateString = $inputString
         # Use $script:WordTemplateInput as hashtable to store the already provided input
         $dateYoungerThan = Test-InputDate -dateString $dateString -dateTable $script:WordTemplateInput -dateTableKey $dateTableKey
