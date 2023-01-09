@@ -204,10 +204,10 @@ function Set-LoopInput {
     $Format = $false
     # Replace all occurrences of the text
     $Replace = 2
-    Write-Verbose "Replacing placeholder '$script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX' with '$inputValue' in the document body"
-    Write-Verbose "Type of input value is $($inputValue.GetType())"          
+    Write-Debug "Replacing placeholder '$script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX' with '$inputValue' in the document body"
+    Write-Debug "Type of input value is $($inputValue.GetType())"          
     $wordDoc.Content.Find.Execute("$script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX", $MatchCase, $MatchWholeWorld, $MatchWildcards, $MatchSoundsLike, $MatchAllWordForms, $Forward, $Wrap, $Format, $inputValue, $Replace) | Out-Null
-    Write-Verbose "Loop input is not suported for header and footer"
+    Write-Debug "Loop input is not suported for header and footer"
 }
 
 function Set-TextInput {
@@ -230,9 +230,9 @@ function Set-TextInput {
     $Format = $false
     # Replace all occurrences of the text
     $Replace = 2  
-    Write-Verbose "Replacing placeholder $script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX with $inputValue in the document body"          
+    Write-Debug "Replacing placeholder $script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX with $inputValue in the document body"          
     $wordDoc.Content.Find.Execute("$script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX", $MatchCase, $MatchWholeWorld, $MatchWildcards, $MatchSoundsLike, $MatchAllWordForms, $Forward, $Wrap, $Format, $inputValue, $Replace) | Out-Null
-    Write-Verbose "Replaceing $script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX with $inputValue in the document header"
+    Write-Debug "Replaceing $script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX with $inputValue in the document header"
     $header = $wordDoc.Sections.Item(1).Headers.Item(1)
     $header.Range.Find.Execute("$script:PLACEHOLDER_PREFIX$($inputName)$script:PLACEHOLDER_POSTFIX", $MatchCase, $false, $MatchWildcards, $MatchSoundsLike, $MatchAllWordForms, $true, $Wrap, $Format, $inputValue, $Replace) | Out-Null  
 }
@@ -463,14 +463,52 @@ function Test-MyWordTemplateDefinitions {
 }
 #endregion Schema Validation Functions
 
+function Test-WordCOM {
+    [bool]$wordCOMAvailable = $false
+    try {
+        $word = New-Object -ComObject Word.Application
+        $wordCOMAvailable = $true
+    } catch {
+        Write-Verbose "COM object 'Word.Application' does not exist."
+    } finally {
+        if ($null -ne $word) {
+            $word.Quit()
+            # Ensure that COM objects are released
+            # if you don't do this, you may get an error from Word when you try to normally open the template word document 
+            # this will also prevent you from using that template word docuemnt in this script again in headless Word mode
+            # because the invisble Word will inform you that an error occured the last time you tried to open the template
+            # and, because Word is invislbe, you won't be able to acknowledge the error which then in turn sets the Word
+            # instance in the backround into an idle state.
+            $null = [System.Runtime.InteropServices.Marshal]::ReleaseComObject([System.__ComObject]$word)
+            [gc]::Collect()
+            [gc]::WaitForPendingFinalizers()                  
+        }
+    }
+    return $wordCOMAvailable
+}
+
 function Test-WordInstallation {
+    Write-Debug "Testing Word installation..."
+    [bool]$wordInstalled = $false
     # Validate that Word is installed for the current user
     $word = Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -like "Microsoft 365*" }
-    if (-not $word) {
-        return $false
-    } else {
-        return $true
+    $wordInstalled = $null -ne $word
+
+    if (-not $wordInstalled) {
+        Write-Debug "'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' did not return a result for the DisplayName 'Microsoft 365*'."
+        Write-Debug "Testing installation path 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE'..."
+        $wordItem = Get-ChildItem -Recurse -Path "C:\Program Files\Microsoft Office\" -Include "WINWORD.exe" -ErrorAction SilentlyContinue
+        $wordInstalled = $null -ne $wordItem
+    } 
+
+    if (-not $wordInstalled) {
+        Write-Debug "'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE' does not exist."
+        # Use COM to test if Word is installed
+        Write-Debug "Testing COM object 'Word.Application'..."
+        $wordInstalled = Test-WordCOM
     }
+
+    return $wordInstalled
 }
 
 function Get-FileNamesInFolder {
@@ -539,15 +577,15 @@ function Get-SeperatorFromInputElement {
     $seperator = " "
     if (-not ($null -eq $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text')) {
         if($inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text' -eq 'NEWLINE') {
-            Write-Verbose "Seperator is NEWLINE"
+            Write-Debug "Seperator is NEWLINE"
             $seperator = $script:NEW_LINE_IN_WORD
         } else {
             $seperator = $inputElement.Attributes[$script:INPUT_ENTRY_SEPERATOR].'#text'
-            Write-Verbose "Seperator is '$seperator'"
+            Write-Debug "Seperator is '$seperator'"
         }
     }
 
-    Write-Verbose "Seperator '$seperator' will be returned."
+    Write-Debug "Seperator '$seperator' will be returned."
     return $seperator
 }
 
@@ -641,7 +679,7 @@ function Get-UserChoices {
     # Sort the Names of the hashtable keys. 
     # Normally we build the hashtable in ordered fashion, but the ordering is lost when handed over to this function which can only happen as hashtable
     $choiceInputElementPrompt += $choiceInputChoices.Keys | Sort-Object | ForEach-Object {
-        Write-Verbose "Adding '$($choiceInputChoices[$_]) ($_)' to choice prompt ..."
+        Write-Debug "Adding '$($choiceInputChoices[$_]) ($_)' to choice prompt ..."
         "`r'$($choiceInputChoices[$_])' ($_)`n" 
     }
     $choiceBreakSingnal = $inputElement.Attributes[$script:USER_LOOP_BREAK_SIGNAL].'#text'
@@ -692,7 +730,7 @@ function Build-ChoiceTable {
             }
             $choiceElementId = $choiceElement.Attributes[$script:CHOICE_ID].'#text'
             $choiceElementText = $choiceElement.Attributes[$script:CHOICE_TEXT].'#text'
-            Write-Verbose "Adding choice '$choiceElementText' with id '$choiceElementId' to choice input element '$choiceInputElementId'"
+            Write-Debug "Adding choice '$choiceElementText' with id '$choiceElementId' to choice input element '$choiceInputElementId'"
             $choiceInputChoices.Add($choiceElementId, $choiceElementText)
         }
     }
@@ -747,7 +785,7 @@ function Get-LoopChild {
                 throw "Child element '$($loopChildElement.LocalName)' of loop element '$loopElementId' is not supported."
             }
             $loopChildElement.Attributes[$script:USER_PROMPT].'#text' = "`t`t$($($loopChildElement.Attributes[$script:USER_PROMPT].'#text').Trim()))"                
-            Write-Verbose "Prompt attribute of child element '$($loopChildElement.Name)' is '$($loopChildElement.Attributes[$script:USER_PROMPT].'#text')'"
+            Write-Debug "Prompt attribute of child element '$($loopChildElement.Name)' is '$($loopChildElement.Attributes[$script:USER_PROMPT].'#text')'"
             # get the user input for the current child element                
             $userInput = Invoke-TemplateConfigElement -templateElement $loopChildElement
             if($userInput.Keys.Count -gt 1) {
@@ -759,12 +797,12 @@ function Get-LoopChild {
             # prepend the loopCounter value to the element id
             [string]$elementId = "$loopCounter$($userInput.Keys[0])"
             $userEntry = $userInput.Values[0]
-            Write-Verbose "User input for element '$($loopChildElement.Name)' is '$userEntry'"
+            Write-Debug "User input for element '$($loopChildElement.Name)' is '$userEntry'"
             if(-not ($userEntry -eq $breakkeyword)) {
                 # add the user input to the iteration input hashtable
                 $templateInput.Add($elementId, "$userEntry$seperator")
             } else {
-                Write-Verbose "Input is '$userEntry'. Breaking input loop."
+                Write-Debug "Input is '$userEntry'. Breaking input loop."
                 $templateInput.Add($breakkeyword, $breakkeyword)
                 break
             }
@@ -788,7 +826,7 @@ function Get-LoopInput{
 
     # get the element id of the loop element
     $loopElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text'
-    Write-Verbose "Loop element id: '$loopElementId'"
+    Write-Debug "Loop element id: '$loopElementId'"
 
     # get the number of iterations
     $counter = 1
@@ -798,7 +836,7 @@ function Get-LoopInput{
     # iterate over the child elements
     [bool]$breakLoop = $false
     do {    
-        Write-Verbose "Iterating over loop. Iteration $counter"
+        Write-Debug "Iterating over loop. Iteration $counter"
         $templateInput += Get-LoopChild -loopElement $inputElement -loopElementId $loopElementId -breakkeyword $breakkeyword -loopCounter $counter
         $breakLoop = $templateInput.Keys -contains $breakkeyword
         if($breakLoop) {
@@ -823,14 +861,14 @@ function Get-UserInput {
         [System.Xml.XmlElement]$inputElement
     )
     $userInput = @{}
-    Write-Verbose "Prompting user for input (Prompt: '$($inputElement.Prompt)') ..."
+    Write-Debug "Prompting user for input (Prompt: '$($inputElement.Prompt)') ..."
     $userProvidedInput = ""
     do { # The outer loop ensures that the input condition is met
         if ($inputElement.Attributes[$script:VALIDATION_REGEX]) {
             do { # The inner loop ensures that the input matches the regex
-                Write-Verbose "Input with regex validation (Regex: $($inputElement.Attributes[$script:VALIDATION_REGEX].'#text')) ..."
+                Write-Debug "Input with regex validation (Regex: $($inputElement.Attributes[$script:VALIDATION_REGEX].'#text')) ..."
                 $userProvidedInput = Read-Host "$($inputElement.Prompt)"
-                Write-Verbose "Input was: '$userProvidedInput'"                
+                Write-Debug "Input was: '$userProvidedInput'"                
             } while (-not ($userProvidedInput -match $inputElement.Attributes[$script:VALIDATION_REGEX].'#text'))
         }
         else {
@@ -864,7 +902,7 @@ function Add-TemplateInput {
             if ($script:WordTemplateInput[$key] -ne $userInput[$key]) {
                 $overwrite = Read-Host "The value for '$key' is already set to '$($script:WordTemplateInput[$key])'. Do you want to overwrite it with '$($userInput[$key])' (y for yes, n for no, c for cancel)?"
                 if ($overwrite -eq 'y') {
-                    Write-Verbose "Overwriting value for '$key' with '$($userInput[$key])'."
+                    Write-Debug "Overwriting value for '$key' with '$($userInput[$key])'."
                     $templateInput[$key] = $userInput[$key]
                 } elseif ($overwrite -eq 'n') {
                     # do nothing
@@ -951,11 +989,11 @@ function Get-TemplateInputRecursive {
             # add it
             $result.Keys | ForEach-Object {
                 if (-not $templateInput.ContainsKey($_)) {
-                    Write-Verbose "Adding $_ to templateInput ..."
+                    Write-Debug "Adding $_ to templateInput ..."
                     $templateInput.Add($_, $result[$_])
                 }
                 if (-not $script:WordTemplateInput.ContainsKey($_) ) {
-                    Write-Verbose "Adding $_ to script wide input hashtable ..."
+                    Write-Debug "Adding $_ to script wide input hashtable ..."
                     $script:WordTemplateInput.Add($_, $result[$_])
                 }
             }

@@ -3,11 +3,14 @@ Import-Module .\Get-MyWordTemplate.psm1 -Force
 InModuleScope Get-MyWordTemplate {
     BeforeAll {
         #$script:verbPref = $VerbosePreference
-        #$VerbosePreference = 'Continue'            
+        #$VerbosePreference = 'Continue' 
+        $script:debugPerf = $DebugPreference
+        $DebugPreference = 'Continue'                       
     }
 
     AfterAll {
         #$VerbosePreference = $script:verbPref
+        $DebugPreference = $script:debugPerf
     }
 
     Describe 'Get-MyWordTemplateNames' {   
@@ -1069,6 +1072,57 @@ InModuleScope Get-MyWordTemplate {
                 $allowedChoices=@{"1"="choice1";"2"="choice2";"3"="choice3"}
                 $isMultiSelect=$true
                 { Get-UserChoicesAsTable -choiceInputElementId "hoist" -allowedChoices $allowedChoices -stringWithUserChoices $userChoice -isMultiSelect $isMultiSelect } | Should -Throw
+            }
+        }
+    }
+
+    Describe 'Test-WordInstallation' {
+        Context 'when called with the required registry key and value' {
+            It 'should return true if the registry key and value are present' {
+                Mock Get-ItemProperty { return @{ "DisplayName" = "Microsoft 365" } }
+                Mock Get-ChildItem { return $null }
+                Mock Test-WordCOM { return $false }
+                Test-WordInstallation | Should -Be $true
+                Assert-MockCalled Get-ItemProperty -Times 1
+                Assert-MockCalled Get-ChildItem -Times 0
+                Assert-MockCalled Test-WordCOM -Times 0
+            }
+        }
+        Context 'when called without the required registry key and value' {
+            It 'should return true if the typicall install path on the C drive is present' {
+                Mock Get-ItemProperty { return $null }
+                Mock Get-ChildItem { return "success" }
+                Mock Test-WordCOM { return $false }
+                Test-WordInstallation | Should -Be $true
+                Assert-MockCalled Get-ItemProperty -Times 1
+                Assert-MockCalled Get-ChildItem -Times 1
+                Assert-MockCalled Test-WordCOM -Times 0
+            }
+        }
+        Context 'when called without the required registry key and value and the C drive path is not present' {
+            It 'should return true if the COM object is present' {
+                Mock Get-ItemProperty { return $null }
+                Mock Get-ChildItem { return $null }
+                Mock Test-WordCOM { return $true }
+                Test-WordInstallation | Should -Be $true
+                Assert-MockCalled Get-ItemProperty -Times 1
+                Assert-MockCalled Get-ChildItem -Times 1
+                Assert-MockCalled Test-WordCOM -Times 1
+            }
+        }
+    }
+
+    Describe 'Test-WordCOM' {
+        Context 'COM object is present' {
+            It 'should return true if the COM object is present' {
+                Mock New-Object { return $null }
+                Test-WordCOM | Should -Be $true
+            }
+        }
+        Context 'COM object is not present' {
+            It 'should return false if the COM object is not present' {
+                Mock New-Object { throw }
+                Test-WordCOM | Should -Be $false
             }
         }
     }
