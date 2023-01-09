@@ -161,6 +161,22 @@ InModuleScope Get-MyWordTemplate {
                 $result | Should -Be $false
             }
         }
+
+        Context 'when called and a $HOMEDRIVE is set to a different drive than the drive on which the script is been excuted' {
+            # The following scenario can pose a problem, but this is not guaranteed to happen.
+            It 'should return true' {  
+                $env:HOMEDRIVE = 'X:'
+                [string]$xmlFile = ".\Tests\validtemplatedefinitions\protocol.xml"
+                $result = Test-MyWordTemplateDefinitionSchema -xmlFilePath $xmlFile
+                $result | Should -Be $true
+            }  
+            BeforeAll {
+                $script:homedriveBackup = $env:HOMEDRIVE
+            }
+            AfterAll {                 
+                $env:HOMEDRIVE = $script:homedriveBackup
+            }
+        }        
     }
 
     Describe 'Invoke-TemplateConfigElement' {  

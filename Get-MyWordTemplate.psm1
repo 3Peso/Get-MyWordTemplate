@@ -389,7 +389,9 @@ function Test-MyWordTemplateDefinitionSchema {
         [string]$xmlFilePath
     )
     $xmlReaderSettings = New-Object System.Xml.XmlReaderSettings
-    $xmlReaderSettings.Schemas.Add('', $xsdPath) | Out-Null
+    # Resolve-Path is important here. If not done, the following line can fail, if the homedrive is set to a different drive
+    # than the script is executed from.
+    $xmlReaderSettings.Schemas.Add('', $(Resolve-Path -path $xsdPath)) | Out-Null
     $xmlReaderSettings.ValidationType = [System.Xml.ValidationType]::Schema
     try {
         $xmlReader = [System.Xml.XmlReader]::Create($xmlFilePath, $xmlReaderSettings)
