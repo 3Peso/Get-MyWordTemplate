@@ -267,7 +267,7 @@ function New-MyWordDocument {
             if($templateInput[$key] -is [string]) {
                 Set-TextInput -wordDoc $wordDoc -inputName $key -inputValue $templateInput[$key]
             # this will handle inputs from Loop elements, and from ChoiceInput elements which allow multiple values
-            } elseif ($templateInput[$key] -is [hashtable] -or $templateInput[$key] -is [ordered]) {
+            } elseif ($templateInput[$key] -is [hashtable] -or $templateInput[$key] -is [System.Collections.Specialized.OrderedDictionary]) {  
                 Set-LoopInput -wordDoc $wordDoc -inputName $key -inputTable $templateInput[$key]
             } else {
                 throw "Invalid input type $($templateInput[$key].GetType())"
@@ -569,7 +569,7 @@ function Get-UserChoicesAsTable {
         [bool]$isMultiSelect,
         [string]$seperator = " "
     )
-    $choices = [ordered]@{}
+    $choices = [System.Collections.Specialized.OrderedDictionary]@{}
 
     if(-not $isMultiSelect) {
         # this will throw an exception if the function has been called with a comma seperated user input
@@ -632,7 +632,7 @@ function Get-UserChoices {
         [Parameter(Mandatory=$true)]
         [hashtable]$choiceInputChoices
     ) 
-    $choices = [ordered]@{}
+    $choices = [System.Collections.Specialized.OrderedDictionary]@{}
 
     # prompt the user to select one of the choices
     $choiceInputElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text' 
@@ -678,7 +678,7 @@ function Build-ChoiceTable {
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )    
-    $choiceInputChoices = [ordered]@{}
+    $choiceInputChoices = [System.Collections.Specialized.OrderedDictionary]@{}
 
     $choiceInputElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text'
     foreach ($choiceElement in $inputElement.ChildNodes) {
@@ -715,7 +715,7 @@ function Get-ChoiceInput {
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )
-    $templateInput = [ordered]@{}
+    $templateInput = [System.Collections.Specialized.OrderedDictionary]@{}
   
     $choiceInputChoices = Build-ChoiceTable -inputElement $inputElement
 
@@ -738,7 +738,7 @@ function Get-LoopChild {
         [Parameter(Mandatory=$true)]
         [int]$loopCounter
     )
-    $templateInput = [ordered]@{}
+    $templateInput = [System.Collections.Specialized.OrderedDictionary]@{}
     $seperator = Get-SeperatorFromInputElement -inputElement $loopElement
 
     foreach ($loopChildElement in $loopElement.ChildNodes) {
@@ -784,7 +784,7 @@ function Get-LoopInput{
         [Parameter(Mandatory=$true)]
         [System.Xml.XmlElement]$inputElement
     )
-    $templateInput = [ordered]@{}
+    $templateInput = [System.Collections.Specialized.OrderedDictionary]@{}
 
     # get the element id of the loop element
     $loopElementId = $inputElement.Attributes[$script:ELEMENT_ID].'#text'
