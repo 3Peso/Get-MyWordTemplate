@@ -1016,7 +1016,7 @@ function Get-TemplateInput {
 
 #region Public Functions
 function Get-MyWordTemplate {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param( 
         # REMARKS: Validation of the templyte type is disabled because it is not possible to pass the templatePath
         # parameter that allows only values which are returned by Get-MyWordTemplateNames    
@@ -1076,8 +1076,11 @@ function Get-MyWordTemplate {
             # Add-TemplateInput returns $true if all input could be added or updated
             if(Add-TemplateInput -userInput $(Get-TemplateInput -xml $script:TemplateDefinition.DocumentElement)) {
                 # then load the word document     
-                $wordTemplateFilePath = Get-WordTemplatePath -templateDefinitionFile $templateDefintionPath -wordTemplatePath $wordTemplatePath           
-                New-MyWordDocument -templatePath $templateDefintionPath -wordTemplatePath $wordTemplateFilePath -templateInput $script:WordTemplateInput -outputPath $outputpath | Out-Null
+                $wordTemplateFilePath = Get-WordTemplatePath -templateDefinitionFile $templateDefintionPath -wordTemplatePath $wordTemplatePath      
+                if($PSCmdlet.ShouldProcess($FilePath,"`r`nCreate Word Document from template '$templateDefintionPath' and word template '$wordTemplateFilePath'. `
+                    Input parameters are `r`n'$($script:WordTemplateInput.Keys | ForEach-Object {"'$($_) = $($script:WordTemplateInput[$_])'`r`n"})'`r`n")) {     
+                    New-MyWordDocument -templatePath $templateDefintionPath -wordTemplatePath $wordTemplateFilePath -templateInput $script:WordTemplateInput -outputPath $outputpath | Out-Null
+                }
             }
         }
     }
