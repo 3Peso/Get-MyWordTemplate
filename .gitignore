@@ -1,6 +1,6 @@
 /TemplateDefinitions/*
 /Templates/*
-/GeneratedDocuments/*
+/GeneratedDocuments/*.docx
 Todos.txt
 /Tests/GeneratedDocuments/*
 Tests/TestResults.xml
